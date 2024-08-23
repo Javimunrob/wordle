@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>❤️Wordle cumple ❤️</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        .container {
+            text-align: center;
+            max-width: 100vw;
+        }
+        .grid {
+            display: grid;
+            gap: 10px;
+            grid-template-columns: repeat(5, 1fr);
+            margin-bottom: 20px;
+        }
+        .grid input {
+            width: 50px;
+            height: 50px;
+            text-align: center;
+            font-size: 24px;
+            border-radius: 5px;
+            border: 2px solid #ccc;
+            outline: none;
+            background-color: #fff;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .grid input.correct {
+            background-color: #6aaa64; /* Verde para letras bien posicionadas */
+            color: white;
+        }
+        .grid input.present {
+            background-color: #ffc107; /* Amarillo para letras mal posicionadas */
+            color: black;
+        }
+        .grid input.absent {
+            background-color: #dc3545; /* Rojo para letras que no están en la palabra */
+            color: white;
+        }
+
+        .keyboard {
+            display: grid;
+            gap: 10px;
+            grid-template-columns: repeat(10, 1fr);
+            justify-items: center;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 600px;
+        }
+        .keyboard button {
+            width: 100%;
+            padding: 15px 0;
+            font-size: 20px;
+            background-color: #ddd;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+        }
+        .keyboard button:hover {
+            background-color: #ccc;
+        }
+        .keyboard button:active {
+            background-color: #bbb;
+            transform: scale(0.95);
+        }
+
+        .buttons-container {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        .buttons-container button {
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+        }
+        .buttons-container button:hover {
+            background-color: #45a049;
+        }
+        .buttons-container button:active {
+            transform: scale(0.95);
+        }
+        .message {
+            font-size: 18px;
+            margin-top: 20px;
+            color: #333;
+        }
+
+        /* Estilos para el popup */
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .popup {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        .popup h2 {
+            margin-bottom: 10px;
+            font-size: 24px;
+            color: #4CAF50;
+        }
+        .popup button {
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .popup button:hover {
+            background-color: #45a049;
+        }
+
+        /* Mostrar el popup cuando está activo */
+        .popup-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Estilos Responsivos para Móviles */
+        @media (max-width: 600px) {
+            .grid input {
+                width: 45px;
+                height: 45px;
+                font-size: 20px;
+            }
+            .keyboard button {
+                font-size: 16px;
+                padding: 12px 0;
+            }
+            .buttons-container button {
+                font-size: 16px;
+                padding: 8px 16px;
+            }
+            .message {
+                font-size: 16px;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .grid input {
+                width: 40px;
+                height: 40px;
+                font-size: 18px;
+            }
+            .keyboard button {
+                font-size: 14px;
+                padding: 10px 0;
+            }
+            .buttons-container button {
+                font-size: 14px;
+                padding: 6px 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="grid-container"></div>
+        <div class="keyboard" id="keyboard-container"></div>
+        <div class="buttons-container">
+            <button onclick="submitGuess()">Comprobar</button>
+            <button onclick="deleteLetter()">Borrar Letra</button>
+        </div>
+        <div class="message" id="message"></div>
+    </div>
+
+    <!-- Popup -->
+    <div class="popup-overlay" id="popup">
+        <div class="popup">
+            <h2>¡Enhorabuena!</h2>
+            <h2>❤️❤️❤️❤️</h2>
+            <p>¡¡Has encontrado la pista!!</p>
+            <button onclick="closePopup()">Cerrar</button>
+        </div>
+    </div>
+
+    <script>
+        const correctWord = 'fotos'; // Cambia esta palabra por la palabra objetivo
+        const maxAttempts = 6;
+        let currentAttempt = 0;
+        let currentGuess = '';
+
+        // Crear el teclado virtual
+        const keyboardContainer = document.getElementById('keyboard-container');
+        const rows = [
+            'qwertyuiop',
+            'asdfghjkl',
+            'zxcvbnm'
+        ];
+
+        rows.forEach(row => {
+            row.split('').forEach(letter => {
+                const button = document.createElement('button');
+                button.textContent = letter;
+                button.onclick = () => {
+                    if (currentGuess.length < 5) {
+                        currentGuess += letter;
+                        updateGrid();
+                    }
+                };
+                keyboardContainer.appendChild(button);
+            });
+        });
+
+        // Crear el grid para intentos
+        const gridContainer = document.getElementById('grid-container');
+        for (let i = 0; i < maxAttempts; i++) {
+            const row = document.createElement('div');
+            row.className = 'grid';
+            for (let j = 0; j < 5; j++) {
+                const input = document.createElement('input');
+                input.maxLength = 1;
+                input.disabled = true;
+                row.appendChild(input);
+            }
+            gridContainer.appendChild(row);
+        }
+
+        // Actualizar el grid con la palabra ingresada
+        function updateGrid() {
+            const inputs = document.querySelectorAll('#grid-container .grid:nth-child(' + (currentAttempt + 1) + ') input');
+            currentGuess.split('').forEach((letter, index) => {
+                inputs[index].value = letter;
+            });
+            for (let i = currentGuess.length; i < 5; i++) {
+                inputs[i].value = '';  // Limpiar las casillas restantes si se borran letras
+            }
+        }
+
+        // Enviar el intento
+        function submitGuess() {
+            const inputs = document.querySelectorAll('#grid-container .grid:nth-child(' + (currentAttempt + 1) + ') input');
+            const guess = Array.from(inputs).map(input => input.value).join('');
+
+            if (guess.length !== 5) {
+                document.getElementById('message').innerText = 'Por favor, ingresa una palabra de 5 letras.';
+                return;
+            }
+
+            // Revisar la palabra
+            guess.split('').forEach((letter, index) => {
+                if (correctWord[index] === letter) {
+                    inputs[index].className = 'correct'; // Letra correcta y bien posicionada
+                } else if (correctWord.includes(letter)) {
+                    inputs[index].className = 'present'; // Letra correcta pero mal posicionada
+                } else {
+                    inputs[index].className = 'absent'; // Letra no está en la palabra
+                }
+            });
+
+            // Si adivina la palabra, mostrar el popup
+            if (guess === correctWord) {
+                document.getElementById('popup').classList.add('active');
+                return;
+            }
+
+            currentAttempt++;
+            currentGuess = '';
+
+            if (currentAttempt >= maxAttempts) {
+                document.getElementById('message').innerText = 'Juego terminado. La palabra era: ' + correctWord;
+                document.querySelectorAll('#keyboard-container button').forEach(button => button.disabled = true);
+            }
+        }
+
+        // Función para cerrar el popup
+        function closePopup() {
+            document.getElementById('popup').classList.remove('active');
+        }
+
+        // Función para borrar la última letra ingresada
+        function deleteLetter() {
+            currentGuess = currentGuess.slice(0, -1); // Elimina el último carácter
+            updateGrid(); // Actualiza la interfaz después de eliminar una letra
+        }
+    </script>
+</body>
+</html>
